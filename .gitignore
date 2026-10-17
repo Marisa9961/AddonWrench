@@ -1,0 +1,14 @@
+/target/
+/.build/
+/.cargo-home/
+
+# Local application state and caches
+/data/
+
+# Debug symbols and editor files
+*.pdb
+/.vs/
+/.idea/
+/.vscode/
+*.rs.bk
+

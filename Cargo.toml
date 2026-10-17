@@ -1,0 +1,32 @@
+[package]
+name = "addon-wrench"
+version = "0.1.0"
+edition = "2024"
+description = "A GPUI mod manager for Valve Source engine games"
+readme = "README.md"
+license = "MIT"
+
+[features]
+default = ["desktop"]
+desktop = ["dep:gpui", "dep:image", "dep:url"]
+
+[dependencies]
+gpui = { version = "=0.2.2", optional = true }
+encoding_rs = "0.8.42"
+serde = { version = "1.0.229", features = ["derive", "rc"] }
+serde_json = { version = "1.0.154" }
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "webp", "gif"], optional = true }
+url = { version = "2.5.8", optional = true }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_Networking_WinHttp", "Win32_Foundation", "Win32_System_Time", "Win32_System_Diagnostics_ToolHelp", "Win32_System_Threading"] }
+
+[[bin]]
+name = "addon-wrench"
+path = "src/main.rs"
+required-features = ["desktop"]
+
+[profile.release]
+lto = "thin"
+strip = true
+
