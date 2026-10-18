@@ -4,6 +4,7 @@ mod context_menu;
 mod details;
 mod filters;
 mod group_info;
+mod icons;
 mod layout;
 mod notifications;
 mod overlays;

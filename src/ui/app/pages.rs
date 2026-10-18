@@ -125,7 +125,7 @@ impl Manager {
                             )
                             .child(self.button(
                                 "new-group",
-                                "＋",
+                                "新建",
                                 Command::CreateEmptyGroup,
                                 false,
                                 self.groups_ready && self.game.is_some(),
@@ -147,7 +147,7 @@ impl Manager {
                                 .p_2()
                                 .text_xs()
                                 .text_color(rgb(MUTED))
-                                .child("点击 ＋ 创建分组；勾选模组后可加入分组。"),
+                                .child("点击“新建”创建分组；勾选模组后可加入分组。"),
                         )
                     })
                     .children(self.groups.iter().enumerate().map(|(index, group)| {

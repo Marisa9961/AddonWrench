@@ -438,6 +438,7 @@ impl Manager {
                     .border_1()
                     .border_color(rgb(LINE))
                     .rounded(px(4.))
+                    .child(icons::leading(icons::Icon::Search).text_color(rgb(MUTED)))
                     .child(self.search.clone())
                     .when(!self.browser.query.is_empty(), |el| {
                         el.child(self.button(

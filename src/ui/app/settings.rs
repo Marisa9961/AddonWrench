@@ -43,27 +43,6 @@ impl Manager {
                             .overflow_y_scroll()
                             .p_5()
                             .child(self.settings_content(cx)),
-                    )
-                    .child(
-                        div()
-                            .flex_shrink_0()
-                            .px_5()
-                            .py_3()
-                            .flex()
-                            .items_center()
-                            .gap_3()
-                            .bg(rgb(PANEL))
-                            .border_t_1()
-                            .border_color(rgb(LINE))
-                            .child(div().flex_1())
-                            .child(self.button(
-                                "settings-done",
-                                "完成",
-                                Command::Close,
-                                true,
-                                true,
-                                cx,
-                            )),
                     ),
             )
     }
@@ -83,6 +62,7 @@ impl Manager {
                             .flex()
                             .items_center()
                             .gap_3()
+                            .child(icons::leading(icons::Icon::View).text_color(rgb(ACCENT)))
                             .child(
                                 div()
                                     .flex_1()
@@ -134,7 +114,10 @@ impl Manager {
             )
             .child(
                 Self::settings_card()
-                    .child(Self::settings_card_heading("数据与维护"))
+                    .child(Self::settings_card_heading(
+                        icons::Icon::HardDrive,
+                        "数据与维护",
+                    ))
                     .child(self.settings_action(
                         "settings-rescan",
                         (
@@ -172,13 +155,20 @@ impl Manager {
             .border_color(rgb(LINE))
     }
 
-    fn settings_card_heading(title: &str) -> Div {
+    fn settings_card_heading(icon: icons::Icon, title: &str) -> Div {
         div()
             .px_4()
             .pt_3()
             .pb_2()
-            .font_weight(FontWeight::BOLD)
-            .child(title.to_owned())
+            .flex()
+            .items_center()
+            .gap_2()
+            .child(icons::leading(icon).text_color(rgb(ACCENT)))
+            .child(
+                div()
+                    .font_weight(FontWeight::BOLD)
+                    .child(title.to_owned()),
+            )
     }
 
     fn settings_divider() -> Div {

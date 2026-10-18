@@ -122,6 +122,14 @@ impl Manager {
         })
         .gap_2()
         .child(
+            icons::leading(if remaining == 0 {
+                icons::Icon::Check
+            } else {
+                icons::Icon::AddTo
+            })
+            .text_color(rgb(MUTED)),
+        )
+        .child(
             div()
                 .flex_1()
                 .min_w_0()
@@ -249,7 +257,7 @@ impl Manager {
             .when(adding, |el| {
                 el.child(self.menu_item(
                     "context-back",
-                    "‹ 返回模组操作",
+                    "返回模组操作",
                     Command::ContextBack,
                     false,
                     true,

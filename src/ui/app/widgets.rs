@@ -93,6 +93,7 @@ impl Manager {
         enabled: bool,
         cx: &Context<Self>,
     ) -> Stateful<Div> {
+        let label: SharedString = label.into();
         let writes_game = matches!(
             command,
             Command::Import
@@ -113,6 +114,12 @@ impl Manager {
             ButtonStyle::Standard => (PANEL, TEXT, 0xf0f2f3),
             ButtonStyle::Soft if active => (TINT, ACCENT, 0xddeee3),
             ButtonStyle::Soft => (BG, MUTED, BG),
+        };
+        let icon = command.icon().filter(|_| !label.as_str().is_empty());
+        let icon_color = match style {
+            ButtonStyle::Primary => PANEL,
+            ButtonStyle::Soft if active => ACCENT,
+            _ => MUTED,
         };
         let click_command = command.clone();
         let open_menu = match command {
@@ -165,7 +172,14 @@ impl Manager {
                     }
                 }),
             )
-            .child(label.into())
+            .when_some(icon, |el, icon| {
+                el.child(
+                    icons::leading(icon)
+                        .mr(px(6.))
+                        .text_color(rgb(icon_color)),
+                )
+            })
+            .child(label)
             .when_some(protection_hint, |el, hint| {
                 el.tooltip(move |_, cx| hover_hint(hint.clone(), cx))
             })
@@ -349,7 +363,7 @@ impl Manager {
                 .child(div().h(px(1.)).my_1().bg(rgb(LINE)))
                 .child(self.menu_item(
                     "add-game",
-                    "＋ 添加游戏目录",
+                    "添加游戏目录",
                     Command::Choose,
                     false,
                     !self.busy,

@@ -318,7 +318,7 @@ impl Manager {
                         .child(
                             self.styled_button(
                                 "workshop-page",
-                                "在 Steam 中打开 ↗",
+                                "在 Steam 中打开",
                                 Command::WorkshopPage(id.clone()),
                                 ButtonStyle::Soft,
                                 true,
@@ -330,7 +330,7 @@ impl Manager {
                         .child(
                             self.button(
                                 "workshop-browser",
-                                "浏览器打开 ↗",
+                                "浏览器打开",
                                 Command::WorkshopBrowser(id.clone()),
                                 false,
                                 true,
@@ -498,8 +498,9 @@ impl Manager {
                 .w_full()
                 .h(px(26.))
                 .px_0()
-                .justify_between()
+                .justify_start()
                 .font_weight(FontWeight::BOLD)
+                .child(div().flex_1())
                 .child(div().text_color(rgb(MUTED)).child(
                     if self.technical_details {
                         "收起 −"
