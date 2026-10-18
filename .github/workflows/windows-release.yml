@@ -1,0 +1,153 @@
+name: Windows Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "发布标签，例如 v1.0.0；留空则使用 Cargo.toml 中的版本"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      # release 构建时 gpui 会调用 fxc.exe 编译 HLSL 着色器。
+      - name: Locate fxc.exe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $roots = @(
+            (Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\bin'),
+            (Join-Path $env:ProgramFiles 'Windows Kits\10\bin')
+          )
+
+          $fxc = @(
+            foreach ($root in $roots) {
+              if (Test-Path $root) {
+                Get-ChildItem -Path $root -Recurse -Filter 'fxc.exe' -ErrorAction SilentlyContinue |
+                  Where-Object { $_.DirectoryName -match '\\x64$' }
+              }
+            }
+          ) | Sort-Object FullName -Descending | Select-Object -First 1
+
+          if (-not $fxc) {
+            throw 'fxc.exe not found. Install the Windows SDK or set GPUI_FXC_PATH manually.'
+          }
+
+          Write-Host "Using $($fxc.FullName)"
+          Add-Content -Path $env:GITHUB_ENV -Value "GPUI_FXC_PATH=$($fxc.FullName)"
+          Add-Content -Path $env:GITHUB_PATH -Value $fxc.DirectoryName
+
+      - name: Build
+        run: cargo build --release --locked
+
+      - name: Resolve release tag
+        id: release
+        shell: pwsh
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $tag = $env:INPUT_TAG
+          if (-not $tag -and $env:REF_TYPE -eq 'tag') {
+            $tag = $env:REF_NAME
+          }
+          if (-not $tag) {
+            $line = Select-String -Path 'Cargo.toml' -Pattern '^version\s*=\s*"([^"]+)"' |
+              Select-Object -First 1
+            if (-not $line) {
+              throw 'Unable to read the package version from Cargo.toml.'
+            }
+            $tag = 'v' + $line.Matches[0].Groups[1].Value
+          }
+          if ($tag -notmatch '^v\d+\.\d+\.\d+([-+][0-9A-Za-z.-]+)?$') {
+            throw "Invalid release tag '$tag'. Expected a semver tag such as v0.1.0."
+          }
+
+          $zip = "AddonWrench-$tag-windows-x64.zip"
+          Write-Host "Release tag: $tag"
+          Write-Host "Archive: $zip"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "tag=$tag"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip=$zip"
+
+      - name: Package
+        shell: pwsh
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          ZIP_NAME: ${{ steps.release.outputs.zip }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $exe = 'target\release\addon-wrench.exe'
+          if (-not (Test-Path $exe)) {
+            throw "Build output not found: $exe"
+          }
+
+          $stage = Join-Path $env:RUNNER_TEMP "AddonWrench-$env:TAG"
+          if (Test-Path $stage) {
+            Remove-Item -Path $stage -Recurse -Force
+          }
+          New-Item -ItemType Directory -Path $stage -Force | Out-Null
+
+          Copy-Item -Path $exe -Destination $stage
+          Copy-Item -Path README.md, LICENSE -Destination $stage
+          New-Item -ItemType Directory -Path (Join-Path $stage 'licenses') -Force | Out-Null
+          Copy-Item -Path 'licenses\GPUI-APACHE-2.0.txt' -Destination (Join-Path $stage 'licenses')
+          New-Item -ItemType Directory -Path (Join-Path $stage 'docs') -Force | Out-Null
+          Copy-Item -Path 'docs\manual.md' -Destination (Join-Path $stage 'docs')
+
+          $zip = Join-Path $env:GITHUB_WORKSPACE $env:ZIP_NAME
+          if (Test-Path $zip) {
+            Remove-Item -Path $zip -Force
+          }
+          Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip -CompressionLevel Optimal
+          Write-Host "Created $zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.release.outputs.zip }}
+          path: ${{ steps.release.outputs.zip }}
+          if-no-files-found: error
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release.outputs.tag }}
+          name: Addon Wrench ${{ steps.release.outputs.tag }}
+          draft: true
+          prerelease: false
+          generate_release_notes: true
+          files: ${{ steps.release.outputs.zip }}
+          fail_on_unmatched_files: true
